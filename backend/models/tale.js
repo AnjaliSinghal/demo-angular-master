@@ -20,6 +20,9 @@ let taleSchema = new Schema({
   earning: {
     type: Number
   },
+  pulishedTales: {
+    type: [Object]
+  },
 }, {
   collection: 'tales'
 })

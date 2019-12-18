@@ -55,7 +55,6 @@ router.post('/uploadFile', upload.single('path'), (req, res, next) => {
     path: url + '/public/' + req.file.filename
   });
   file.save().then(result => {
-    console.log("---",result);
     res.status(201).json({
       message: "Upload file successfully!",
       taleCreated: {
@@ -65,7 +64,7 @@ router.post('/uploadFile', upload.single('path'), (req, res, next) => {
       }
     })
   }).catch(err => {
-    console.log("---->",err),
+    console.log(err),
       res.status(500).json({
         error: err
       });
@@ -152,7 +151,8 @@ let modifiedUserList = uniqueArray.map((tale)=>{
                           myTales : getMyTales(tale.writer_id),
                           WinningProbability: WinningProbability(uniqueArray,tale.writer_id), 
                           shareFlag : true,
-                          earning : 0
+                          earning : 0,
+                          pulishedTales: []
                       }
                   });
 //final chance of writers with their tales
@@ -249,18 +249,23 @@ const randomizer = (array) => {
 
 //update the tale info if selected 
 
-const update = (writer_id)=>{
+const update = (writer_id,date)=>{
   let len = uniqueModifiedArray.length;
   for(let i=0;i<len;i++){
       if (uniqueModifiedArray[i].writer_id === writer_id){
           if (uniqueModifiedArray[i].shareFlag === true && uniqueModifiedArray[i].myTales.length != 0) {
                   uniqueModifiedArray[i].earning += 1000;
+                  var pulishedTales =  uniqueModifiedArray[i].pulishedTales;
+                  var taleNumber = (uniqueModifiedArray[i].earning/1000) - 1;
+                  
+                  pulishedTales.push({ 'date': date, 'tale': uniqueModifiedArray[i].myTales[taleNumber]})
                   let query = {'writer_id': writer_id} 
                   let data = { 'writer_id': writer_id, 
                                 'myTales' : uniqueModifiedArray[i].myTales,
                                 'WinningProbability' : uniqueModifiedArray[i].WinningProbability,
                                 'shareFlag' : uniqueModifiedArray[i].shareFlag,
-                                'earning' : uniqueModifiedArray[i].earning
+                                'earning' : uniqueModifiedArray[i].earning,
+                                'pulishedTales': pulishedTales
                   };
                   
                   Tale.updateOne(query, data, function(err, doc) {
@@ -286,7 +291,7 @@ const update = (writer_id)=>{
 }
 
 //returns 10 Lucky writers of the day
-const getLuckyTen = (arrayList) =>{
+const getLuckyTen = (arrayList,date) =>{
   let luckyTen =[];
   while (totalTales>=10) {
       
@@ -296,7 +301,7 @@ const getLuckyTen = (arrayList) =>{
           if (!luckyTen.includes(lucky)){
               luckyTen.push(lucky);
                //update selected writer data 
-              update(lucky);
+              update(lucky,date);
           }
       }
      
@@ -312,7 +317,7 @@ const getLuckyTen = (arrayList) =>{
              if (!luckyTen.includes(lucky)){
                 luckyTen.push(lucky);
                //update selected writer data 
-                update(lucky);
+                update(lucky,date);
               }
          }
          length = luckyTen.length;
@@ -327,7 +332,7 @@ const getLuckyTen = (arrayList) =>{
 
 let finalData = [];
 for(let i=1;i<30;i++){
-  let luckyTen = getLuckyTen(selectedArrayList);
+  let luckyTen = getLuckyTen(selectedArrayList, i);
   finalData.push({ 'date': i , 'published': luckyTen});
 }
 res.status(200).json({
