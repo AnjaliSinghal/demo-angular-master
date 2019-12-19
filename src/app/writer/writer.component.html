@@ -1,0 +1,23 @@
+<div class="col-md-12 p-3"> 
+    <div class="table-responsive table-striped">
+        <table class="table">
+            <thead class="thead-dark">
+                <tr>
+                  <th> S.no </th>
+                  <th  scope="col">Writer Id</th>
+                  <th  scope="col">Submitted Tales</th>
+                  <th  scope="col">Earning</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr  *ngFor="let writer of writers  , let i = index">
+                  <th >{{i+1}}</th>
+                  <th >{{writer.writer_id}}</th>
+                  <td>{{writer.myTales.length}}</td>
+                  <td>{{writer.earning}}</td>
+                  
+                </tr>
+              </tbody>
+        </table>
+      </div>
+  </div>

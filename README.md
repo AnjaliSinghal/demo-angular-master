@@ -37,3 +37,5 @@ $ mongod
 $ nodemon
 ```
 # demo-angular-master
+
+# for algorithum  plesae demo.routes.js file

@@ -26,16 +26,10 @@ var upload = multer({
   storage: storage,
   // limits: {
   //   fileSize: 1024 * 1024 * 5
-  // },
+  // }
   fileFilter: (req, file, cb) => {
-    console.log(file.mimetype)
+    //console.log(file.mimetype)
     cb(null, true);
-    /*if (file.mimetype == "image/png" || file.mimetype == "image/jpg" || file.mimetype == "image/jpeg") {
-      cb(null, true);
-    } else {
-      cb(null, false);
-      return cb(new Error('Only .png, .jpg and .jpeg format allowed!'));
-    }*/
   }
 });
 
@@ -44,9 +38,12 @@ var upload = multer({
 let File = require('../models/upload');
 // tales model 
 let Tale = require('../models/tale');
+// issues modal
+let Issue = require('../models/issue');
 
 
-// POST User
+
+// upload xlsx file and processed its data
 router.post('/uploadFile', upload.single('path'), (req, res, next) => {
   const url = req.protocol + '://' + req.get('host')
   const file = new File({
@@ -54,7 +51,18 @@ router.post('/uploadFile', upload.single('path'), (req, res, next) => {
     name: req.file.filename,
     path: url + '/public/' + req.file.filename
   });
+  const filename = req.file.filename 
+  // Empty tale table (store writers informantion)
+  Tale.deleteMany(function(err, issueTale){
+    if (err) console.log("error in delete tale",err);
+  });
+  // issue table (store shecudling data)
+  Issue.deleteMany(function(
+    err, issueTale){
+    if (err) console.log("error in delete issue",err);
+  });
   file.save().then(result => {
+    processFile(filename);
     res.status(201).json({
       message: "Upload file successfully!",
       taleCreated: {
@@ -71,14 +79,16 @@ router.post('/uploadFile', upload.single('path'), (req, res, next) => {
   })
 })
 
-// GET All Users
-router.get("/", (req, res, next) => {
-  const url = './public/file.xlsx';
+// processed file data and store it in db
+const processFile = (value) => {
+  console.log(value)
+  const url = './public/' + value;
   let workbook = XLSX.readFile(url);                //reading excel sheet
   let sheetFirstName = workbook.SheetNames[0];
   let workSheet = workbook.Sheets[sheetFirstName];
   let taleObjectArray = XLSX.utils.sheet_to_json(workSheet);
   
+  // convert writer_id and tale_id into string format 
   let dataList = taleObjectArray.map((tale)=>{
     return {
         writer_id : tale.writer_id.toString(),
@@ -92,7 +102,7 @@ router.get("/", (req, res, next) => {
     var filteredArray = Array.from(uniq).map(e => JSON.parse(e));
     return filteredArray;
   }
-
+  // Get unique array list 
   let uniqueArray = filterList(dataList);
 
 //Count the total number tales
@@ -152,7 +162,6 @@ let modifiedUserList = uniqueArray.map((tale)=>{
                           WinningProbability: WinningProbability(uniqueArray,tale.writer_id), 
                           shareFlag : true,
                           earning : 0,
-                          pulishedTales: []
                       }
                   });
 //final chance of writers with their tales
@@ -176,7 +185,7 @@ uniqueModifiedArray.forEach(function(doc) {
 if (counter > 0) {
   bulk.execute(function(err,result) {
      // Tales inserted in DB
-     console.log(counter, " Tales inserted in DB.")
+    // console.log(counter, " Tales inserted in DB.")
   });
 }
 
@@ -250,33 +259,42 @@ const randomizer = (array) => {
 //update the tale info if selected 
 
 const update = (writer_id,date)=>{
+  let status = false;
   let len = uniqueModifiedArray.length;
   for(let i=0;i<len;i++){
       if (uniqueModifiedArray[i].writer_id === writer_id){
           if (uniqueModifiedArray[i].shareFlag === true && uniqueModifiedArray[i].myTales.length != 0) {
-                  uniqueModifiedArray[i].earning += 1000;
+                 
                   var pulishedTales =  uniqueModifiedArray[i].pulishedTales;
-                  var taleNumber = (uniqueModifiedArray[i].earning/1000) - 1;
-                  
-                  pulishedTales.push({ 'date': date, 'tale': uniqueModifiedArray[i].myTales[taleNumber]})
-                  let query = {'writer_id': writer_id} 
-                  let data = { 'writer_id': writer_id, 
-                                'myTales' : uniqueModifiedArray[i].myTales,
-                                'WinningProbability' : uniqueModifiedArray[i].WinningProbability,
-                                'shareFlag' : uniqueModifiedArray[i].shareFlag,
-                                'earning' : uniqueModifiedArray[i].earning,
-                                'pulishedTales': pulishedTales
-                  };
-                  
-                  Tale.updateOne(query, data, function(err, doc) {
-                    if (err) console.log("error",err);
-                    uniqueModifiedArray[i].WinningProbability = WinningProbability(uniqueModifiedArray, writer_id);
-                    totalTales = getTotalTales(uniqueModifiedArray, 1);
-                    maxWinningProbability = getMaxWinningProbability(uniqueModifiedArray);
-                    fillList(uniqueModifiedArray);
-                  });
-                 
-                 
+                  var taleNumber = uniqueModifiedArray[i].earning/1000;
+                  if( uniqueModifiedArray[i].myTales[taleNumber]){
+                    //pulishedTales.push({ 'date': date, 'tale': uniqueModifiedArray[i].myTales[taleNumber]})
+                    uniqueModifiedArray[i].earning += 1000;
+                    let query = {'writer_id': writer_id} 
+                    let data = { 'writer_id': writer_id, 
+                                  'myTales' : uniqueModifiedArray[i].myTales,
+                                  'WinningProbability' : uniqueModifiedArray[i].WinningProbability,
+                                  'shareFlag' : uniqueModifiedArray[i].shareFlag,
+                                  'earning' : uniqueModifiedArray[i].earning
+                    };
+                    let issue = {
+                      '_id': new mongoose.Types.ObjectId(),
+                      'writer_id': writer_id,
+                      'date': date, 
+                      'tale_id': uniqueModifiedArray[i].myTales[taleNumber]
+                    }  
+                    Issue.create(issue, function(err, issueTale){
+                      if (err) console.log("error in publish tale",err);
+                    });
+                    Tale.updateOne(query, data, function(err, doc) {
+                      if (err) console.log("error in writer earning update",err);
+                      uniqueModifiedArray[i].WinningProbability = WinningProbability(uniqueModifiedArray, writer_id);
+                      totalTales = getTotalTales(uniqueModifiedArray, 1);
+                      maxWinningProbability = getMaxWinningProbability(uniqueModifiedArray);
+                      fillList(uniqueModifiedArray);
+                    });
+                    status = true;
+                  }   
           }
           if (uniqueModifiedArray[i].myTales.length === 0){
               uniqueModifiedArray[i].shareFlag = false;
@@ -288,6 +306,7 @@ const update = (writer_id,date)=>{
   selectedArrayList = arraySelector(allArrayList);
   emptyLists(allArrayList);
   fillList(uniqueModifiedArray);
+  return status;
 }
 
 //returns 10 Lucky writers of the day
@@ -299,9 +318,11 @@ const getLuckyTen = (arrayList,date) =>{
       if(tale != undefined && tale.length!=0){
           let lucky = randomizer(tale);
           if (!luckyTen.includes(lucky)){
-              luckyTen.push(lucky);
                //update selected writer data 
-              update(lucky,date);
+               var status = update(lucky,date); 
+               if(status) {
+                 luckyTen.push(lucky);
+               }
           }
       }
      
@@ -313,11 +334,14 @@ const getLuckyTen = (arrayList,date) =>{
      while(length<10){
          let randomIndex = Math.floor((Math.random() * selectedArrayList.length));
          if (selectedArrayList[randomIndex] != undefined && selectedArrayList[randomIndex].length != 0){
-             let lucky = randomizer(selectedArrayList[randomIndex]);
+             let lucky = randomizer(selectedArrayList[randomIndex]);)
              if (!luckyTen.includes(lucky)){
-                luckyTen.push(lucky);
+               
                //update selected writer data 
-                update(lucky,date);
+                var status = update(lucky,date); 
+                if(status) {
+                  luckyTen.push(lucky);
+                }
               }
          }
          length = luckyTen.length;
@@ -331,34 +355,29 @@ const getLuckyTen = (arrayList,date) =>{
 
 
 let finalData = [];
-for(let i=1;i<30;i++){
+// create shecdule for 30 days 
+for(let i=1;i<=30;i++){
   let luckyTen = getLuckyTen(selectedArrayList, i);
   finalData.push({ 'date': i , 'published': luckyTen});
 }
-res.status(200).json({
-  message: "Tales chance retrieved successfully!",
-  tales: finalData
-});
-  console.log(finalData)
-  /*Tale.find({'writer_id': {$in : finalData[0].published}}).then(data => {
-    res.status(200).json({
-      message: "Tales chance retrieved successfully!",
-      tales: data
-    });
-  });*/
-});
+};
 
-router.get("/status", (req, res, next) => {
-  Tale.find({'earning': { $gt: 0}}).then(data => {
-     let count = data;
-     console.log("published",count)
-    res.status(200).json({
-      message: "Published tales retrieved successfully!",
-      tales: data
-    });
+// get writes tales count and earning record.
+router.get("/getwriterList", (req, res, next) => {
+  Tale.find({}).sort({'earning' : -1}).then(data => {
+    //console.log("Writer list retrieved successfully!");
+    res.status(200).send(data);
   });
 });
-
+// get tales scheduling list for 30 days.
+router.get("/publishList", (req, res, next) => {
+  Issue.aggregate([{ $group :{ _id: "$date" , tales: { $push: {tale_id:"$tale_id" , writer_id:"$writer_id"}}}},{
+    $sort:{date:1}
+  }]).then(data => {
+    console.log("Publish list retrieved successfully!", data);
+    res.status(200).send(data);
+  });
+});
 
 
 module.exports = router;

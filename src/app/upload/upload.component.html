@@ -1,0 +1,21 @@
+<div class="container">
+
+    <form [formGroup]="form" (ngSubmit)="submitUser()">
+
+        <!-- Progress Bar -->
+        <div class="progress form-group" *ngIf="progress > 0">
+            <div class="progress-bar progress-bar-striped bg-success" role="progressbar" [style.width.%]="progress">
+            </div>
+        </div>
+       
+        <div class="form-group">
+            <label for="exampleFormControlFile1">Upload Outgrow file</label>
+            <input type="file"  class="form-control-file" (change)="uploadFile($event)" accept=".xlsx, .xls,">
+        </div>
+
+        <div class="form-group">
+            <button class="btn btn-danger btn-block btn-lg">Upload</button>
+        </div>
+        
+    </form>
+</div>

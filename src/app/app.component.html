@@ -1,19 +1,46 @@
-<div class="container">
-    <form [formGroup]="form" (ngSubmit)="submitUser()">
 
-        <!-- Progress Bar -->
-        <div class="progress form-group" *ngIf="progress > 0">
-            <div class="progress-bar progress-bar-striped bg-success" role="progressbar" [style.width.%]="progress">
-            </div>
-        </div>
-
-        <div class="form-group">
-            <input type="file" (change)="uploadFile($event)">
-        </div>
-
-
-        <div class="form-group">
-            <button class="btn btn-danger btn-block btn-lg">Create</button>
-        </div>
-    </form>
+<div class="container-fluid">
+    
+    <div class="col-md-12"> <h2>OutGrow Publisher App</h2></div>
+    <br>
+    <ul class="nav nav-tabs">
+        <li class="nav-item">
+          <a class="nav-link" [ngClass]="{active: shown === 'upload'}" (click)="redirect('upload')">Upload File</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" [ngClass]="{active: shown === 'writers'}" (click)="redirect('writers')">Writers</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" [ngClass]="{active: shown === 'scheduling'}" (click)="redirect('scheduling')">Scheduling</a>
+        </li>
+        
+      </ul>
+     <!-- <div class="col-md-12 p-3"> 
+        <div class="table-responsive table-striped">
+            <table class="table">
+                <thead class="thead-dark">
+                    <tr>
+                      <th> S.no </th>
+                      <th  scope="col">Writer Id</th>
+                      <th  scope="col">Submitted Tales</th>
+                      <th  scope="col">Earning</th>
+                    </tr>Writers
+                  </thead>
+                  <tbody>
+                    <tr  *ngFor="let writer of writers, let i = index">
+                      <th >{{i+1}}</th>
+                      <th >{{writer.writer_id}}</th>
+                      <td>{{writer.myTales.length}}</td>
+                      <td>{{writer.earning}}</td>
+                      
+                    </tr>
+                  </tbody>
+            </table>
+          </div>
+      </div>-->
+     
+      
+    
+    
+    <router-outlet></router-outlet>
 </div>
