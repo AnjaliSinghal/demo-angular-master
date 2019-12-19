@@ -38,4 +38,4 @@ $ nodemon
 ```
 # demo-angular-master
 
-# for algorithum  plesae demo.routes.js file
+for algorithum  please read demo.routes.js file
