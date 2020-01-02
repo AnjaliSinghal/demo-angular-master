@@ -119,6 +119,7 @@ let getTotalTales = (arrayList,flag)=>{
 }
 // intial 
 let totalTales = getTotalTales(uniqueArray,0);
+
 //counts the number of tales shared by individual writer and returns the winning probability
 const WinningProbability = (array,writer_id) => {
   let count = 0;
@@ -126,7 +127,7 @@ const WinningProbability = (array,writer_id) => {
       if (writer.writer_id === writer_id) count++;
   })
 
-return count / totalTales;   
+  return count / totalTales;   
 }
 
 //returns the array of tales shared by individual writers
@@ -166,7 +167,8 @@ let modifiedUserList = uniqueArray.map((tale)=>{
                   });
 //final chance of writers with their tales
 let uniqueModifiedArray = filterList(modifiedUserList);
-
+// average earning of a writer 
+let avrEarning = Math.floor(totalTales/uniqueModifiedArray.length)*1000;
 let bulk = Tale.collection.initializeOrderedBulkOp();
 let counter = 0;
 
@@ -252,7 +254,7 @@ let selectedArrayList = arraySelector(allArrayList);
 
 //returns random element from an array
 const randomizer = (array) => {
-  let randomIndex = Math.floor((Math.random() * array.length));
+  let randomIndex = Math.floor(Math.random() * array.length);
   return array[randomIndex];
 }
 
@@ -267,7 +269,7 @@ const update = (writer_id,date)=>{
                  
                   var pulishedTales =  uniqueModifiedArray[i].pulishedTales;
                   var taleNumber = uniqueModifiedArray[i].earning/1000;
-                  if( uniqueModifiedArray[i].myTales[taleNumber]){
+                  if( uniqueModifiedArray[i].myTales[taleNumber] && uniqueModifiedArray[i].earning < avrEarning){
                     //pulishedTales.push({ 'date': date, 'tale': uniqueModifiedArray[i].myTales[taleNumber]})
                     uniqueModifiedArray[i].earning += 1000;
                     let query = {'writer_id': writer_id} 
@@ -313,53 +315,51 @@ const update = (writer_id,date)=>{
 const getLuckyTen = (arrayList,date) =>{
   let luckyTen =[];
   while (totalTales>=10) {
-      
-  arrayList.forEach((tale)=>{
-      if(tale != undefined && tale.length!=0){
-          let lucky = randomizer(tale);
-          if (!luckyTen.includes(lucky)){
-               //update selected writer data 
-               var status = update(lucky,date); 
-               if(status) {
-                 luckyTen.push(lucky);
-               }
-          }
-      }
-     
-  });
-
-  let length = luckyTen.length;
-  // if lucky ten is not select then select randomly
-  if(length!= 10){
-     while(length<10){
-         let randomIndex = Math.floor((Math.random() * selectedArrayList.length));
-         if (selectedArrayList[randomIndex] != undefined && selectedArrayList[randomIndex].length != 0){
-             let lucky = randomizer(selectedArrayList[randomIndex]);)
-             if (!luckyTen.includes(lucky)){
-               
-               //update selected writer data 
+   arrayList.forEach((tale)=>{
+        if(tale != undefined && tale.length!=0){
+          let lucky = randomizer(tale);  
+            if (!luckyTen.includes(lucky)){
+                //update selected writer data 
                 var status = update(lucky,date); 
                 if(status) {
                   luckyTen.push(lucky);
                 }
-              }
-         }
-         length = luckyTen.length;
-     }
+            }
+        }
+    });
+    let length = luckyTen.length;
+  // if lucky ten is not select then select randomly
+    if(length!= 10){
+      while(length<10){
+          let randomIndex = Math.floor((Math.random() * selectedArrayList.length));
+          if (selectedArrayList[randomIndex] != undefined && selectedArrayList[randomIndex].length != 0){
+              let lucky = randomizer(selectedArrayList[randomIndex]);
+              
+              if (!luckyTen.includes(lucky)){
+                //update selected writer data 
+                  var status = update(lucky,date); 
+                  if(status) {
+                    luckyTen.push(lucky);
+                  }
+                }
+          }
+          length = luckyTen.length;
+      }
+    }
+
+
+    return luckyTen;
+    totalTales = getTotalTales(uniqueModifiedArray, 1)
   }
-
-  return luckyTen;
-  totalTales = getTotalTales(uniqueModifiedArray, 1)
-}
 }
 
 
-let finalData = [];
-// create shecdule for 30 days 
-for(let i=1;i<=30;i++){
-  let luckyTen = getLuckyTen(selectedArrayList, i);
-  finalData.push({ 'date': i , 'published': luckyTen});
-}
+  let finalData = [];
+  // create shecdule for 30 days 
+  for(let i=1;i<=30;i++){
+    let luckyTen = getLuckyTen(selectedArrayList, i);
+    finalData.push({ 'date': i , 'published': luckyTen});
+  }
 };
 
 // get writes tales count and earning record.
